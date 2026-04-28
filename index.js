@@ -32,11 +32,17 @@ function generateId() {
 }
 
 app.post('/api/students', (req, res) => {
+  if (!req.body.name) {
+    return res.status(400).json({ message: 'Name is required' });
+  }
+
   const data = readData();
   const newStudent = { id: generateId(), ...req.body };
+
   data.students.push(newStudent);
   writeData(data);
-  res.json(newStudent);
+
+  res.status(201).json(newStudent);
 });
 
 app.get('/api/students', (req, res) => {
@@ -45,30 +51,40 @@ app.get('/api/students', (req, res) => {
 
 app.put('/api/students/:id', (req, res) => {
   const data = readData();
-  const index = data.students.findIndex((s) => s.id === req.params.id);
+  const index = data.students.findIndex(s => s.id === req.params.id);
 
-  if (index !== -1) {
-    data.students[index] = { ...data.students[index], ...req.body };
-    writeData(data);
-    res.json(data.students[index]);
-  } else {
-    res.status(404).json({ message: 'Student not found' });
+  if (index === -1) {
+    return res.status(404).json({ message: 'Student not found' });
   }
+
+  data.students[index] = { ...data.students[index], ...req.body };
+  writeData(data);
+
+  res.json(data.students[index]);
 });
 
 app.delete('/api/students/:id', (req, res) => {
   const data = readData();
-  data.students = data.students.filter((s) => s.id !== req.params.id);
+  data.students = data.students.filter(s => s.id !== req.params.id);
+
   writeData(data);
-  res.json({ message: 'Deleted' });
+  res.json({ message: 'Deleted successfully' });
 });
 
 app.post('/api/attendance', (req, res) => {
+  const { student_id, status } = req.body;
+
+  if (!student_id || !status) {
+    return res.status(400).json({ message: 'student_id and status required' });
+  }
+
   const data = readData();
-  const record = { id: generateId(), ...req.body };
+  const record = { id: generateId(), student_id, status };
+
   data.attendance.push(record);
   writeData(data);
-  res.json(record);
+
+  res.status(201).json(record);
 });
 
 app.get('/api/attendance', (req, res) => {
@@ -78,13 +94,13 @@ app.get('/api/attendance', (req, res) => {
 app.get('/api/attendance/summary/:studentId', (req, res) => {
   const data = readData();
   const records = data.attendance.filter(
-    (a) => a.student_id === req.params.studentId
+    a => a.student_id === req.params.studentId
   );
 
   let present = 0;
   let absent = 0;
 
-  records.forEach((r) => {
+  records.forEach(r => {
     if (r.status === 'present') present++;
     else absent++;
   });
@@ -93,10 +109,7 @@ app.get('/api/attendance/summary/:studentId', (req, res) => {
     ? ((present / records.length) * 100).toFixed(2)
     : 0;
 
-  let alert = null;
-  if (absent >= 3) {
-    alert = 'Warning: Frequent absences detected!';
-  }
+  let alert = absent >= 3 ? 'Warning: Frequent absences detected!' : null;
 
   res.json({
     total_present: present,
@@ -106,10 +119,10 @@ app.get('/api/attendance/summary/:studentId', (req, res) => {
   });
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => {
-  res.send('Attendance API (path-based) is running...');
+  res.send('Attendance API is running...');
 });
 
 app.listen(PORT, () => {
