@@ -65,10 +65,18 @@ app.put('/api/students/:id', (req, res) => {
 
 app.delete('/api/students/:id', (req, res) => {
   const data = readData();
-  data.students = data.students.filter(s => s.id !== req.params.id);
+
+  const studentIndex = data.students.findIndex(s => s.id === req.params.id);
+  if (studentIndex === -1) {
+    return res.status(404).json({ message: 'Student not found' });
+  }
+
+  data.students.splice(studentIndex, 1);
+
+  data.attendance = data.attendance.filter(a => a.student_id !== req.params.id);
 
   writeData(data);
-  res.json({ message: 'Deleted successfully' });
+  res.json({ message: 'Student and their attendance records deleted successfully' });
 });
 
 app.post('/api/attendance', (req, res) => {
@@ -91,11 +99,23 @@ app.get('/api/attendance', (req, res) => {
   res.json(readData().attendance);
 });
 
+app.delete('/api/attendance/:id', (req, res) => {
+  const data = readData();
+  const recordIndex = data.attendance.findIndex(a => a.id === req.params.id);
+
+  if (recordIndex === -1) {
+    return res.status(404).json({ message: 'Attendance record not found' });
+  }
+
+  data.attendance.splice(recordIndex, 1);
+  writeData(data);
+
+  res.json({ message: 'Attendance record deleted successfully' });
+});
+
 app.get('/api/attendance/summary/:studentId', (req, res) => {
   const data = readData();
-  const records = data.attendance.filter(
-    a => a.student_id === req.params.studentId
-  );
+  const records = data.attendance.filter(a => a.student_id === req.params.studentId);
 
   let present = 0;
   let absent = 0;
